@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+body {
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background: #f6f4fd;
+}
+.font-display { font-family: "Fraunces", Georgia, "Times New Roman", serif; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fade-up { animation: fadeUp 0.35s ease both; }
+@media (prefers-reduced-motion: reduce) { .fade-up { animation: none; } }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.22);
+  border-color: #a855f7;
+}
