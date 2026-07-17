@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { grad, inputCls, fmtLong, tsToKey, todayKey, monthName, UPI_ID, computeStats } from "./lib/helpers";
 import { Card, Btn, Chip, Avatar, Stat, SectionH, Empty, Heatmap, FakeQR, SongsList } from "./ui";
-import qrImage from "./assets/qr.png";
+import qrImage from "./assets/qr.jpeg";
 import * as api from "./lib/api";
 
 /* ---------------- HOME ---------------- */
