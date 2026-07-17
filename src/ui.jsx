@@ -187,28 +187,22 @@ export function Heatmap({ rows }) {
 }
 
 /* ---------------- decorative UPI QR (replace with your real QR image if you like) ---------------- */
-export function FakeQR({ value = UPI_ID, size = 172 }) {
-  const n = 25;
-  let h = 2166136261;
-  for (const c of value) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
-  const rnd = () => { h = (Math.imul(h, 1664525) + 1013904223) >>> 0; return h / 4294967296; };
-  const fin = (x, y) => x === 0 || x === 6 || y === 0 || y === 6 || (x >= 2 && x <= 4 && y >= 2 && y <= 4);
-  const rects = [];
-  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-    let on;
-    if (x < 7 && y < 7) on = fin(x, y);
-    else if (x >= n - 7 && y < 7) on = fin(x - (n - 7), y);
-    else if (x < 7 && y >= n - 7) on = fin(x, y - (n - 7));
-    else on = rnd() > 0.52;
-    if (on) rects.push(<rect key={x + "-" + y} x={x} y={y} width={0.92} height={0.92} rx={0.2} fill="#2a1163" />);
-  }
+
+export function FakeQR({ size = 172 }) {
   return (
-    <svg viewBox={`-1 -1 ${n + 2} ${n + 2}`} width={size} height={size} style={{ background: "#fff", borderRadius: 14 }}>
-      {rects}
-    </svg>
+    <img
+      src={qrImage}
+      alt="UPI QR Code"
+      width={size}
+      height={size}
+      style={{
+        borderRadius: 14,
+        background: "#fff",
+        objectFit: "contain",
+      }}
+    />
   );
 }
-
 /* ---------------- songs accordion · songs: [{id,title,lyrics,created_at}] ---------------- */
 export function SongsList({ songs }) {
   const [open, setOpen] = useState(songs.length ? songs[0].id : null);

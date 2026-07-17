@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { grad, inputCls, fmtLong, tsToKey, todayKey, monthName, UPI_ID, computeStats } from "./lib/helpers";
 import { Card, Btn, Chip, Avatar, Stat, SectionH, Empty, Heatmap, FakeQR, SongsList } from "./ui";
+import qrImage from "./assets/qr.png";
 import * as api from "./lib/api";
 
 /* ---------------- HOME ---------------- */
@@ -234,7 +235,7 @@ export function PayPage({ profile, say }) {
               </button>
             </div>
           </div>
-          <p className="text-xs text-slate-400 text-center px-4 py-3">Set your real UPI ID in the .env file (VITE_UPI_ID). You can also swap this pattern for your bank's QR image.</p>
+          <p className="text-xs text-slate-400 text-center px-4 py-3">Bank's QR image.</p>
         </Card>
 
         <Card className="p-5">
