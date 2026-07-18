@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { X, Music, Sparkles, ChevronDown, BookOpen } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { grad, dkey, daysAgo, fmt, fmtLong, tsToKey, isNew, UPI_ID } from "./lib/helpers";
-
+import qrImage from "./assets/qr.jpeg";
 /* ---------------- atoms ---------------- */
 export function Card({ children, className = "", style }) {
   return <div className={`bg-white rounded-2xl border border-violet-100 shadow-sm ${className}`} style={style}>{children}</div>;
