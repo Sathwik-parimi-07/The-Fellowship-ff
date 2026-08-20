@@ -7,11 +7,12 @@ import { Card, Btn } from "./ui";
 export default function Auth() {
   const [mode, setMode] = useState("signin"); // 'signin' | 'signup'
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
+  const [email, setEmail] = useState("");  // email is used for both sign in and sign up
+  const [pw, setPw] = useState(""); 
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null); // { type: 'err' | 'ok', text }
 
+  // Handle form submission for sign in or sign up
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true); setMsg(null);
