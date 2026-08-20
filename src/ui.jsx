@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { X, Music, Sparkles, ChevronDown, BookOpen } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { grad, dkey, daysAgo, fmt, fmtLong, tsToKey, isNew, UPI_ID } from "./lib/helpers";
-import qrImage from "./assets/qr.jpeg";
+import { grad, dkey, daysAgo, fmtLong, tsToKey, isNew } from "./lib/helpers";
+
 /* ---------------- atoms ---------------- */
 export function Card({ children, className = "", style }) {
   return <div className={`bg-white rounded-2xl border border-violet-100 shadow-sm ${className}`} style={style}>{children}</div>;
@@ -186,23 +185,6 @@ export function Heatmap({ rows }) {
   );
 }
 
-/* ---------------- decorative UPI QR (replace with your real QR image if you like) ---------------- */
-
-export function FakeQR({ size = 172 }) {
-  return (
-    <img
-      src={qrImage}
-      alt="UPI QR Code"
-      width={size}
-      height={size}
-      style={{
-        borderRadius: 14,
-        background: "#fff",
-        objectFit: "contain",
-      }}
-    />
-  );
-}
 /* ---------------- songs accordion · songs: [{id,title,lyrics,created_at}] ---------------- */
 export function SongsList({ songs }) {
   const [open, setOpen] = useState(songs.length ? songs[0].id : null);
@@ -230,34 +212,7 @@ export function SongsList({ songs }) {
           </Card>
         );
       })}
-      {!songs.length && <Empty icon={BookOpen} title="No songs yet" sub="Songs from the admin will appear here." />}
-    </div>
-  );
-}
-
-/* ---------------- giving chart · payments: [{paid_on, amount}] ---------------- */
-export function PayChart({ payments, height = 220 }) {
-  const data = useMemo(() => Array.from({ length: 30 }, (_, i) => {
-    const k = daysAgo(29 - i);
-    return { d: fmt(k), amt: payments.filter((p) => p.paid_on === k).reduce((s, p) => s + Number(p.amount), 0) };
-  }), [payments]);
-  return (
-    <div style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.45} />
-              <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1edfc" vertical={false} />
-          <XAxis dataKey="d" tick={{ fontSize: 10, fill: "#8d83b8" }} tickLine={false} axisLine={false} interval={6} />
-          <YAxis tick={{ fontSize: 10, fill: "#8d83b8" }} tickLine={false} axisLine={false} width={44} tickFormatter={(v) => "₹" + v} />
-          <RTooltip formatter={(v) => ["₹" + v, "Gifts"]} contentStyle={{ borderRadius: 12, border: "1px solid #ede9fe", fontSize: 12 }} labelStyle={{ color: "#4c1d95", fontWeight: 700 }} />
-          <Area type="monotone" dataKey="amt" stroke="#7c3aed" strokeWidth={2.5} fill="url(#pg)" />
-        </AreaChart>
-      </ResponsiveContainer>
+      {!songs.length && <Empty icon={BookOpen} title="No songs yet" sub="Songs from the Music Secretary will appear here." />}
     </div>
   );
 }

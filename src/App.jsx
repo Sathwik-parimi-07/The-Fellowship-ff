@@ -1,32 +1,38 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Home, Upload, Music, IndianRupee, HeartHandshake, BookOpen, Bell,
-  LayoutDashboard, ClipboardCheck, LogOut, Menu, X,
+  Home, Upload, Music, HeartHandshake, BookOpen, Bell, MessagesSquare,
+  Megaphone, Users, LogOut, Menu, X,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
-import { grad } from "./lib/helpers";
+import { grad, timeAgo, ROLE_LABEL } from "./lib/helpers";
 import * as api from "./lib/api";
 import { Card, Avatar, Toast, Viewer, Spinner } from "./ui";
 import Auth from "./Auth";
-import { HomeM, UploadQT, SongsM, PayPage, PrayerM, LitFeed } from "./MenteePages";
-import { DashA, ReviewsA, PaymentsA, PrayersA, SongsA } from "./AdminPages";
+import { HomeM, UploadQT, ThreadsPage, SongsM, PrayerM, LitFeed } from "./MenteePages";
+import { MusicDesk, PrayerDesk, AnnouncePage, PeoplePage } from "./AdminPages";
 
-const MENTEE_NAV = [
-  { k: "home", label: "Home", icon: Home },
-  { k: "qt", label: "Upload QT", icon: Upload },
-  { k: "songs", label: "Songs", icon: Music },
-  { k: "pay", label: "Pay", icon: IndianRupee },
-  { k: "prayer", label: "Prayer", icon: HeartHandshake },
-  { k: "lit", label: "Literature", icon: BookOpen },
-];
-const ADMIN_NAV = [
-  { k: "dash", label: "Dashboard", icon: LayoutDashboard },
-  { k: "reviews", label: "QT Reviews", icon: ClipboardCheck },
-  { k: "payments", label: "Payments", icon: IndianRupee },
-  { k: "prayers", label: "Prayer Requests", icon: HeartHandshake },
-  { k: "lit", label: "Literature", icon: BookOpen },
-  { k: "songs", label: "Send Songs", icon: Music },
-];
+const TITLES = {
+  home: "Home", qt: "Upload QT", threads: "Mentorship", songs: "Songs", prayer: "Prayer",
+  lit: "Literature", music: "Music Desk", prayerdesk: "Prayer Desk", announce: "Announce", people: "People",
+};
+
+function navFor(role) {
+  const base = [
+    { k: "home", label: "Home", icon: Home },
+    { k: "qt", label: "Upload QT", icon: Upload },
+    { k: "threads", label: "Mentorship", icon: MessagesSquare },
+    { k: "songs", label: "Songs", icon: Music },
+    { k: "prayer", label: "Prayer", icon: HeartHandshake },
+    { k: "lit", label: "Literature", icon: BookOpen },
+  ];
+  if (role === "music_secretary") base.push({ k: "music", label: "Music Desk", icon: Music });
+  if (role === "prayer_secretary") base.push({ k: "prayerdesk", label: "Prayer Desk", icon: HeartHandshake });
+  if (role === "president") base.push(
+    { k: "announce", label: "Announce", icon: Megaphone },
+    { k: "people", label: "People", icon: Users },
+  );
+  return base;
+}
 
 function FullLoader() {
   return (
@@ -37,9 +43,9 @@ function FullLoader() {
   );
 }
 
-function Sidebar({ profile, isAdmin, view, go, counts, open, close, onSignOut }) {
-  const nav = isAdmin ? ADMIN_NAV : MENTEE_NAV;
-  const badge = (k) => (isAdmin ? (k === "reviews" ? counts.reviews : k === "prayers" ? counts.prayers : 0) : 0);
+function Sidebar({ profile, view, go, badges, open, close, onSignOut }) {
+  const nav = navFor(profile.role);
+  const badge = (k) => (k === "threads" ? badges.pending : k === "prayerdesk" ? badges.prayers : 0);
   return (
     <>
       {open && <div className="fixed inset-0 z-30 md:hidden" style={{ background: "rgba(18,8,42,.55)" }} onClick={close} />}
@@ -72,7 +78,7 @@ function Sidebar({ profile, isAdmin, view, go, counts, open, close, onSignOut })
           <Avatar name={profile.name} size={36} />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-white truncate">{profile.name}</div>
-            <div className="text-xs text-violet-300">{isAdmin ? "Mentor · Admin" : "Mentee"}</div>
+            <div className="text-xs text-violet-300">{ROLE_LABEL[profile.role] || "Member"}</div>
           </div>
           <button onClick={onSignOut} className="p-2 rounded-lg text-violet-300 hover:text-white hover:bg-white/10" title="Sign out"><LogOut size={17} /></button>
         </div>
@@ -81,200 +87,258 @@ function Sidebar({ profile, isAdmin, view, go, counts, open, close, onSignOut })
   );
 }
 
-function Header({ profile, isAdmin, title, counts, go, onMenu }) {
+function Header({ profile, title, annList, annUnseen, onOpenBell, onMenu }) {
   const [bell, setBell] = useState(false);
-  const total = isAdmin ? counts.reviews + counts.prayers : 0;
+  const toggle = () => { const next = !bell; setBell(next); if (next) onOpenBell(); };
   return (
     <header className="sticky top-0 z-20 border-b border-violet-100" style={{ background: "rgba(255,255,255,.82)", backdropFilter: "blur(10px)" }}>
       <div className="flex items-center gap-2.5 px-4 sm:px-6 py-3 max-w-5xl mx-auto w-full">
         <button onClick={onMenu} className="md:hidden p-2 rounded-lg text-violet-700 hover:bg-violet-50"><Menu size={20} /></button>
         <h1 className="font-display text-lg font-semibold text-violet-900 flex-1 truncate">{title}</h1>
-        {isAdmin && (
-          <div className="relative">
-            <button onClick={() => setBell(!bell)} className="relative p-2.5 rounded-xl text-violet-700 hover:bg-violet-50">
-              <Bell size={19} />
-              {total > 0 && <span className="absolute text-white rounded-full font-bold text-center" style={{ top: 2, right: 2, background: "#d946ef", fontSize: 9.5, minWidth: 16, padding: "1.5px 4px" }}>{total}</span>}
-            </button>
-            {bell && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setBell(false)} />
-                <Card className="absolute right-0 mt-2 w-72 p-2 z-20 shadow-xl">
-                  {total === 0 && <div className="p-3 text-sm text-slate-500 text-center">You're all caught up ✨</div>}
-                  {counts.reviews > 0 && (
-                    <button onClick={() => { go("reviews"); setBell(false); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-violet-50 text-left">
-                      <div className="rounded-lg flex items-center justify-center shrink-0" style={{ width: 34, height: 34, background: "#fef3c7", color: "#d97706" }}><ClipboardCheck size={16} /></div>
-                      <div className="text-sm font-semibold text-violet-900">{counts.reviews} QT page{counts.reviews > 1 ? "s" : ""} waiting for review</div>
-                    </button>
-                  )}
-                  {counts.prayers > 0 && (
-                    <button onClick={() => { go("prayers"); setBell(false); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-violet-50 text-left">
-                      <div className="rounded-lg flex items-center justify-center shrink-0" style={{ width: 34, height: 34, background: "#fae8ff", color: "#c026d3" }}><HeartHandshake size={16} /></div>
-                      <div className="text-sm font-semibold text-violet-900">{counts.prayers} new prayer point{counts.prayers > 1 ? "s" : ""}</div>
-                    </button>
-                  )}
-                </Card>
-              </>
-            )}
-          </div>
-        )}
+        <div className="relative">
+          <button onClick={toggle} className="relative p-2.5 rounded-xl text-violet-700 hover:bg-violet-50">
+            <Bell size={19} />
+            {annUnseen > 0 && <span className="absolute text-white rounded-full font-bold text-center" style={{ top: 2, right: 2, background: "#d946ef", fontSize: 9.5, minWidth: 16, padding: "1.5px 4px" }}>{annUnseen}</span>}
+          </button>
+          {bell && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setBell(false)} />
+              <Card className="absolute right-0 mt-2 w-80 p-2 z-20 shadow-xl max-h-96 overflow-y-auto">
+                <div className="px-3 pt-2 pb-1 text-xs font-bold text-fuchsia-600 uppercase tracking-wide">Announcements</div>
+                {annList.length === 0 && <div className="p-3 text-sm text-slate-500 text-center">Nothing yet — announcements from the President appear here.</div>}
+                {annList.map((a) => (
+                  <div key={a.id} className="p-3 rounded-xl hover:bg-violet-50">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-lg flex items-center justify-center shrink-0" style={{ width: 30, height: 30, background: "#fae8ff", color: "#c026d3" }}><Megaphone size={14} /></div>
+                      <div className="text-sm font-bold text-violet-900 flex-1 truncate">{a.title}</div>
+                      <span className="text-xs text-slate-400 shrink-0">{timeAgo(a.created_at)}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 whitespace-pre-line mt-1.5">{a.content}</p>
+                  </div>
+                ))}
+              </Card>
+            </>
+          )}
+        </div>
         <Avatar name={profile.name} size={34} />
       </div>
     </header>
   );
 }
 
+/* ================= SHELL ================= */
 function Shell({ profile }) {
-  const isAdmin = profile.role === "admin";
-  const [view, setView] = useState(isAdmin ? "dash" : "home");
-  const viewRef = useRef(view);
-  useEffect(() => { viewRef.current = view; }, [view]);
-
-  const [navOpen, setNavOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("home");
+  const [menu, setMenu] = useState(false);
+  const [toast, setToast] = useState("");
   const [viewer, setViewer] = useState(null);
-  const [toast, setToast] = useState(null);
-  const tRef = useRef(null);
-  const say = (m) => { setToast(m); clearTimeout(tRef.current); tRef.current = setTimeout(() => setToast(null), 2800); };
+  const [loading, setLoading] = useState(true);
 
-  // data
+  const [relations, setRelations] = useState({ mentor: null, mentees: [] });
+  const [annList, setAnnList] = useState([]);
+  const [badges, setBadges] = useState({ pending: 0, prayers: 0 });
+  const [annUnseen, setAnnUnseen] = useState(0);
+
   const [myRows, setMyRows] = useState([]);
   const [songs, setSongs] = useState([]);
   const [letter, setLetter] = useState(null);
   const [lit, setLit] = useState([]);
-  const [queue, setQueue] = useState({ pending: [], reviewed: [] });
-  const [payments, setPayments] = useState([]);
   const [prayers, setPrayers] = useState([]);
-  const [counts, setCounts] = useState({ reviews: 0, prayers: 0 });
-  const [savingLetter, setSavingLetter] = useState(false);
-  const [sendingSong, setSendingSong] = useState(false);
+  const [people, setPeople] = useState([]);
+  const [mentorships, setMentorships] = useState([]);
+  const [pendingCounts, setPendingCounts] = useState({});
+  const [sending, setSending] = useState(false);
 
-  const loadCounts = () => { if (isAdmin) api.fetchCounts().then(setCounts).catch(() => {}); };
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const relRef = useRef(relations);
+  relRef.current = relations;
+
+  const isPrayerSec = profile.role === "prayer_secretary";
+  const seenKey = "abide-ann-seen-" + profile.id;
+
+  const say = (m) => { setToast(m); setTimeout(() => setToast(""), 3400); };
+
+  const computeAnnUnseen = (list) => {
+    const seen = Number(localStorage.getItem(seenKey) || 0);
+    setAnnUnseen(list.filter((a) => new Date(a.created_at).getTime() > seen).length);
+  };
+  const openBell = () => { localStorage.setItem(seenKey, String(Date.now())); setAnnUnseen(0); };
+
+  const refreshPending = async (rel) => {
+    const r = rel || relRef.current;
+    const counts = await api.fetchPendingCounts(r.mentees.map((m) => m.id));
+    setPendingCounts(counts);
+    setBadges((b) => ({ ...b, pending: Object.values(counts).reduce((a, c) => a + c, 0) }));
+  };
+  const refreshPrayerBadge = async () => {
+    if (!isPrayerSec) return;
+    try { const n = await api.fetchUnreadPrayerCount(); setBadges((b) => ({ ...b, prayers: n })); } catch {}
+  };
+  const refreshAnnouncements = async () => {
+    try { const a = await api.fetchAnnouncements(); setAnnList(a); computeAnnUnseen(a); return a; } catch { return []; }
+  };
 
   const loadFor = async (v, quiet = false) => {
     if (!quiet) setLoading(true);
     try {
       if (v === "home") {
-        const [r, s, l] = await Promise.all([api.fetchMyUploads(profile.id), api.fetchSongs(), api.fetchLetter()]);
-        setMyRows(r); setSongs(s); setLetter(l);
+        const [r, s, l, a] = await Promise.all([api.fetchMyUploads(profile.id), api.fetchSongs(), api.fetchLetter(), api.fetchAnnouncements()]);
+        setMyRows(r); setSongs(s); setLetter(l); setAnnList(a); computeAnnUnseen(a);
       } else if (v === "qt") setMyRows(await api.fetchMyUploads(profile.id));
-      else if (v === "songs" && !isAdmin) setSongs(await api.fetchSongs());
+      else if (v === "threads") await refreshPending();
+      else if (v === "songs" || v === "music") setSongs(await api.fetchSongs());
       else if (v === "prayer") setLetter(await api.fetchLetter());
       else if (v === "lit") setLit(await api.fetchLiterature(profile.id));
-      else if (v === "dash") {
-        const [q, p, pr, l] = await Promise.all([api.fetchReviewQueue(), api.fetchPayments(), api.fetchPrayers(), api.fetchLiterature(profile.id)]);
-        setQueue(q); setPayments(p); setPrayers(pr); setLit(l);
-      } else if (v === "reviews") setQueue(await api.fetchReviewQueue());
-      else if (v === "payments") setPayments(await api.fetchPayments());
-      else if (v === "prayers") {
-        const [pr, l] = await Promise.all([api.fetchPrayers(), api.fetchLetter()]);
-        setPrayers(pr); setLetter(l);
-      } else if (v === "songs" && isAdmin) setSongs(await api.fetchSongs());
-    } catch (e) {
-      console.error(e);
-      say(e.message || "Couldn't load data — check your connection");
-    }
+      else if (v === "prayerdesk") {
+        const [p, l] = await Promise.all([api.fetchPrayers(), api.fetchLetter()]);
+        setPrayers(p); setLetter(l);
+        refreshPrayerBadge();
+      } else if (v === "announce") {
+        const [a, pp] = await Promise.all([api.fetchAnnouncements(), api.fetchPeople()]);
+        setAnnList(a); computeAnnUnseen(a); setPeople(pp);
+      } else if (v === "people") {
+        const [pp, mm] = await Promise.all([api.fetchPeople(), api.fetchAllMentorships()]);
+        setPeople(pp); setMentorships(mm);
+      }
+    } catch (e) { say(e.message || "Couldn't load — pull to refresh"); }
     if (!quiet) setLoading(false);
   };
 
-  useEffect(() => { loadFor(view); }, [view]);
-  useEffect(() => { loadCounts(); }, []);
+  const go = (v) => { setView(v); loadFor(v); };
 
-  // realtime pings
   useEffect(() => {
-    if (isAdmin) {
-      return api.onAdminEvents((type) => {
-        loadCounts();
-        say(type === "prayer" ? "New prayer point arrived 🙏" : "New QT uploaded 📖");
-        const v = viewRef.current;
-        if ((type === "prayer" && (v === "prayers" || v === "dash")) || (type === "upload" && (v === "reviews" || v === "dash"))) loadFor(v, true);
-      });
-    }
-    return api.onMyReviews(profile.id, () => {
-      say("Your QT was reviewed — streak grew 🔥");
-      const v = viewRef.current;
-      if (v === "qt" || v === "home") loadFor(v, true);
-    });
+    let unsub = () => {};
+    (async () => {
+      try {
+        const rel = await api.fetchRelations(profile.id);
+        setRelations(rel);
+        await loadFor("home");
+        await refreshPending(rel);
+        await refreshPrayerBadge();
+        unsub = api.subscribeAll(
+          {
+            uid: profile.id,
+            isPrayerSec,
+            mentorId: rel.mentor ? rel.mentor.id : null,
+            menteeIds: rel.mentees.map((m) => m.id),
+          },
+          {
+            menteeQT: (authorId) => {
+              const who = relRef.current.mentees.find((m) => m.id === authorId);
+              say(`New QT from ${who ? who.name : "your mentee"} 📖`);
+              refreshPending();
+              if (viewRef.current === "threads") loadFor("threads", true);
+            },
+            mentorQT: () => {
+              say("Your mentor shared today's QT 🌿");
+              if (viewRef.current === "threads") loadFor("threads", true);
+            },
+            reviewed: () => {
+              say("Your QT was reviewed — streak grew 🔥");
+              if (viewRef.current === "qt" || viewRef.current === "home") loadFor(viewRef.current, true);
+            },
+            prayer: () => {
+              say("New prayer point arrived 🙏");
+              refreshPrayerBadge();
+              if (viewRef.current === "prayerdesk") loadFor("prayerdesk", true);
+            },
+            announce: async () => {
+              const a = await refreshAnnouncements();
+              const latest = a[0];
+              say(latest ? `Announcement: ${latest.title}` : "New announcement 📣");
+              if (viewRef.current === "home" || viewRef.current === "announce") loadFor(viewRef.current, true);
+            },
+          }
+        );
+      } catch (e) { say(e.message || "Couldn't load your data"); setLoading(false); }
+    })();
+    return () => unsub();
   }, []);
 
-  // actions (quiet reload keeps the page from flashing)
-  const act = async (fn, ok, reloads = [view]) => {
-    try {
-      await fn();
-      if (ok) say(ok);
-      for (const v of reloads) if (v === viewRef.current) await loadFor(v, true);
-      loadCounts();
-    } catch (e) { say(e.message || "Something went wrong — try again"); }
+  /* ---------- role actions ---------- */
+  const act = async (fn, okMsg, after) => {
+    setSending(true);
+    try { await fn(); okMsg && say(okMsg); after && after(); }
+    catch (e) { say(e.message || "Something went wrong"); }
+    setSending(false);
   };
+  const onSendSong = (title, lyrics, reset) =>
+    act(() => api.addSong(title, lyrics), "Song sent to everyone 🎵", () => { reset(); loadFor("music", true); });
+  const onSaveLetter = (content) =>
+    act(() => api.saveLetter(content), "Letter published 💌", () => loadFor("prayerdesk", true));
+  const onRead = async (id) => { try { await api.setPrayerRead(id); loadFor("prayerdesk", true); refreshPrayerBadge(); } catch (e) { say(e.message); } };
+  const onReadAll = async () => { try { await api.markAllPrayersRead(); loadFor("prayerdesk", true); refreshPrayerBadge(); } catch (e) { say(e.message); } };
+  const onSendAnnouncement = (payload, reset) =>
+    act(() => api.addAnnouncement(profile.id, payload), payload.audience === "all" ? "Announced to everyone 📣" : "Sent to the people you picked 📣", () => { reset(); loadFor("announce", true); });
+  const onSetRole = (person, role) =>
+    act(() => api.setRole(person.id, role), `${person.name} is now ${ROLE_LABEL[role]}`, () => loadFor("people", true));
+  const onSetMentor = (person, mentorId) =>
+    act(async () => {
+      await api.setMentor(person.id, mentorId);
+      const rel = await api.fetchRelations(profile.id);
+      setRelations(rel);
+      refreshPending(rel);
+    }, mentorId ? `Mentor updated for ${person.name}` : `${person.name} is now top of their chain`, () => loadFor("people", true));
+  const onAfterReview = () => refreshPending();
 
-  const onReview = (id) => act(() => api.reviewUpload(id), "Marked reviewed — their streak just grew 🔥");
-  const onRead = (id) => act(() => api.setPrayerRead(id), null);
-  const onReadAll = () => act(() => api.markAllPrayersRead(), "All marked read");
-  const onSaveLetter = async (content) => {
-    setSavingLetter(true);
-    await act(() => api.saveLetter(content), "Prayer letter published");
-    setSavingLetter(false);
-  };
-  const onSendSong = async (title, lyrics, done) => {
-    setSendingSong(true);
-    await act(() => api.addSong(title, lyrics), "Song sent to all mentees 🎵");
-    done && done();
-    setSendingSong(false);
-  };
-
-  const nav = isAdmin ? ADMIN_NAV : MENTEE_NAV;
-  const title = (nav.find((n) => n.k === view) || nav[0]).label;
-
-  let page;
-  if (loading) page = <Spinner />;
-  else if (!isAdmin) {
-    if (view === "home") page = <HomeM profile={profile} rows={myRows} songs={songs} letter={letter} go={setView} />;
-    else if (view === "qt") page = <UploadQT profile={profile} rows={myRows} refresh={() => loadFor("qt", true)} say={say} openViewer={setViewer} />;
-    else if (view === "songs") page = <SongsM songs={songs} />;
-    else if (view === "pay") page = <PayPage profile={profile} say={say} />;
-    else if (view === "prayer") page = <PrayerM profile={profile} letter={letter} say={say} />;
-    else page = <LitFeed profile={profile} posts={lit} refresh={() => loadFor("lit", true)} say={say} canPost />;
-  } else {
-    if (view === "dash") page = <DashA queue={queue} payments={payments} prayers={prayers} litCount={lit.length} go={setView} onReview={onReview} openViewer={setViewer} />;
-    else if (view === "reviews") page = <ReviewsA queue={queue} onReview={onReview} openViewer={setViewer} />;
-    else if (view === "payments") page = <PaymentsA payments={payments} />;
-    else if (view === "prayers") page = <PrayersA key={letter ? letter.updated_at : "new"} prayers={prayers} letter={letter} onSaveLetter={onSaveLetter} onRead={onRead} onReadAll={onReadAll} savingLetter={savingLetter} />;
-    else if (view === "songs") page = <SongsA songs={songs} onSend={onSendSong} sending={sendingSong} />;
-    else page = <LitFeed profile={profile} posts={lit} refresh={() => loadFor("lit", true)} say={say} canPost={false} />;
-  }
+  const openViewer = (d) => setViewer(d);
 
   return (
     <div className="min-h-screen" style={{ background: "#f6f4fd" }}>
-      <Sidebar profile={profile} isAdmin={isAdmin} view={view} go={setView} counts={counts}
-        open={navOpen} close={() => setNavOpen(false)} onSignOut={() => supabase.auth.signOut()} />
+      <Sidebar profile={profile} view={view} go={go} badges={badges} open={menu} close={() => setMenu(false)}
+        onSignOut={() => supabase.auth.signOut()} />
       <div className="md:pl-64 flex flex-col min-h-screen">
-        <Header profile={profile} isAdmin={isAdmin} title={title} counts={counts} go={setView} onMenu={() => setNavOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-5xl mx-auto">
-          <div key={view + loading} className="fade-up space-y-5">{page}</div>
+        <Header profile={profile} title={TITLES[view]} annList={annList} annUnseen={annUnseen} onOpenBell={openBell} onMenu={() => setMenu(true)} />
+        <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+          {loading ? <Spinner /> : (
+            <>
+              {view === "home" && <HomeM profile={profile} rows={myRows} songs={songs} letter={letter} announcements={annList} relations={relations} go={go} />}
+              {view === "qt" && <UploadQT profile={profile} rows={myRows} mentorName={relations.mentor ? relations.mentor.name : null} refresh={() => loadFor("qt", true)} say={say} openViewer={openViewer} />}
+              {view === "threads" && <ThreadsPage profile={profile} relations={relations} pendingCounts={pendingCounts} say={say} openViewer={openViewer} onAfterReview={onAfterReview} />}
+              {view === "songs" && <SongsM songs={songs} />}
+              {view === "prayer" && <PrayerM profile={profile} letter={letter} say={say} />}
+              {view === "lit" && <LitFeed profile={profile} posts={lit} refresh={() => loadFor("lit", true)} say={say} />}
+              {view === "music" && <MusicDesk songs={songs} onSend={onSendSong} sending={sending} />}
+              {view === "prayerdesk" && <PrayerDesk key={letter ? letter.updated_at : "empty"} prayers={prayers} letter={letter} onSaveLetter={onSaveLetter} onRead={onRead} onReadAll={onReadAll} savingLetter={sending} />}
+              {view === "announce" && <AnnouncePage profile={profile} people={people} announcements={annList} onSend={onSendAnnouncement} sending={sending} />}
+              {view === "people" && <PeoplePage profile={profile} people={people} mentorships={mentorships} onSetRole={onSetRole} onSetMentor={onSetMentor} />}
+            </>
+          )}
         </main>
       </div>
-      <Viewer data={viewer} onClose={() => setViewer(null)} />
       <Toast msg={toast} />
+      <Viewer data={viewer} onClose={() => setViewer(null)} />
     </div>
   );
 }
 
+/* ================= AUTH GATE ================= */
 export default function App() {
-  const [session, setSession] = useState(undefined); // undefined = still checking
+  const [session, setSession] = useState(undefined);
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (session && session.user) {
-      api.getProfile().then(setProfile).catch((e) => console.error("profile load failed", e));
-    } else setProfile(null);
+    if (!session) { setProfile(null); return; }
+    let tries = 0;
+    const grab = async () => {
+      try {
+        const p = await api.getProfile();
+        if (p) { setProfile(p); return; }
+      } catch {}
+      if (++tries < 6) setTimeout(grab, 700); // profile row is created by a DB trigger just after signup
+    };
+    grab();
   }, [session]);
 
-  if (session === undefined || (session && !profile)) return <FullLoader />;
+  if (session === undefined) return <FullLoader />;
   if (!session) return <Auth />;
+  if (!profile) return <FullLoader />;
   return <Shell key={profile.id + profile.role} profile={profile} />;
 }

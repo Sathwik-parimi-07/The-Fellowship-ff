@@ -90,7 +90,7 @@ export default function Auth() {
             </button>
           )}
           <p className="text-xs text-slate-400 mt-4">
-            New accounts join as mentees. Your mentor's account is promoted to admin once (see the README).
+            New accounts join as members. The President pairs mentors & mentees and assigns roles (see the README).
           </p>
         </Card>
       </div>

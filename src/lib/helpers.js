@@ -8,7 +8,12 @@ export const grad = {
 export const inputCls =
   "w-full bg-white border border-violet-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 transition";
 
-export const UPI_ID = import.meta.env.VITE_UPI_ID || "yourname@upi";
+export const ROLE_LABEL = {
+  member: "Member",
+  president: "President",
+  prayer_secretary: "Prayer Secretary",
+  music_secretary: "Music Secretary",
+};
 
 // ---------- dates ----------
 export const dkey = (d) =>
@@ -20,6 +25,13 @@ export const tsToKey = (ts) => dkey(new Date(ts));
 export const fmt = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString("en-IN", { day: "numeric", month: "short" }); };
 export const fmtLong = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }); };
 export const isNew = (k) => { const [y, m, d] = k.split("-").map(Number); return (Date.now() - new Date(y, m - 1, d)) / 864e5 <= 7; };
+export const timeAgo = (ts) => {
+  const s = (Date.now() - new Date(ts).getTime()) / 1000;
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.floor(s / 60) + "m ago";
+  if (s < 86400) return Math.floor(s / 3600) + "h ago";
+  return fmtLong(tsToKey(ts));
+};
 export const monthName = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
 // ---------- streak & stats from qt_uploads rows [{qt_date, status}] ----------
@@ -43,7 +55,7 @@ export function computeStats(rows) {
   };
 }
 
-// ---------- shrink phone photos before upload (saves storage + bandwidth) ----------
+// ---------- shrink phone photos before upload ----------
 export async function shrinkImage(file, maxDim = 1600, quality = 0.82) {
   try {
     const url = URL.createObjectURL(file);
@@ -62,6 +74,6 @@ export async function shrinkImage(file, maxDim = 1600, quality = 0.82) {
     const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", quality));
     return blob || file;
   } catch {
-    return file; // if anything goes wrong, upload the original
+    return file;
   }
 }
