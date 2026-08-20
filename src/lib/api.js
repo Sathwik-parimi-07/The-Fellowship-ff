@@ -117,7 +117,7 @@ export async function addPrayer(uid, type, content) {
 export async function fetchPrayers() {
   const { data, error } = await supabase
     .from("prayers")
-    .select("*, author:profiles(name)")
+    .select("*, author:profiles!prayers_author_id_fkey(name)")
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw error;
@@ -157,7 +157,7 @@ export async function saveLetter(content) {
 export async function fetchAnnouncements() {
   const { data, error } = await supabase
     .from("announcements")
-    .select("*, author:profiles(name)")
+    .select("*, author:profiles!announcements_author_id_fkey(name)")
     .order("created_at", { ascending: false })
     .limit(20);
   if (error) throw error;
@@ -181,7 +181,7 @@ export async function addAnnouncement(uid, { title, content, audience, recipient
 export async function fetchLiterature(uid) {
   const { data, error } = await supabase
     .from("literature")
-    .select("*, author:profiles(name), literature_likes(user_id)")
+    .select("*, author:profiles!literature_author_id_fkey(name), literature_likes(user_id)")
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) throw error;
